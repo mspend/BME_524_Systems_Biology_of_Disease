@@ -20,8 +20,8 @@
 # on command line
 # cd Dropbox\ \(ASU\)/pbmc
 
-pip install scanpy
-pip install leidenalg
+# pip install scanpy
+# pip install leidenalg
 
 ######################################
 ## Restart the kernel!              ##
