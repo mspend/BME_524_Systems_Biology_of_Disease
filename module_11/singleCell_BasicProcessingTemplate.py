@@ -20,8 +20,9 @@
 # on command line
 # cd Dropbox\ \(ASU\)/pbmc
 
-# pip install scanpy
-# pip install leidenalg
+# Install required packages
+#  !pip install scanpy
+#  !pip install leidenalg
 
 ######################################
 ## Restart the kernel!              ##
@@ -39,8 +40,10 @@ import scanpy as sc
 import os
 
 import matplotlib
+from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+
 
 #------------------------
 # Load data
@@ -72,7 +75,7 @@ adata.shape
 # Generate quality control metrics
 adata.var['mt'] = adata.var_names.str.startswith('MT-')  # annotate the group of mitochondrial genes as 'mt'
 sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], percent_top=None, log1p=False, inplace=True)
-adata
+
 # High proportions of mito genes are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells
 adata.var[adata.var['mt']] # look at the mitochrondrial genes
 adata.obs['pct_counts_mt']
@@ -86,22 +89,23 @@ sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt'],
 sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', save ='_total_counts_pct_mt.pdf')
 sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_counts_genes.pdf')
 
+# Set up the cutoffs
+mt_cutoffs = (0.001, 12)
+total_counts_cutoffs = (500, 10000)
+
 # Visualize optimal cutoff values prior to filtering
 with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
   ax1 = sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', show=False)
-  ax1.axhline(y=0.001, color='red', linestyle='--')
-  ax1.axhline(y=12, color='red', linestyle='--')
-  ax1.axvline(x=500, color = 'red', linestyle='--')
-  ax1.axvline(x=10000, color = 'red', linestyle='--')
+  ax1.axhline(y=mt_cutoffs[0], color='red', linestyle='--')
+  ax1.axhline(y=mt_cutoffs[1], color='red', linestyle='--')
+  ax1.axvline(x=total_counts_cutoffs[0], color = 'red', linestyle='--')
+  ax1.axvline(x=total_counts_cutoffs[1], color = 'red', linestyle='--')
   pp.savefig()
   plt.close()
 
 # Remove cells that have too many mitochondrial genes expressed or too many total counts
-keep = (adata.obs['pct_counts_mt']> 0.001) & (adata.obs['pct_counts_mt'] < 12) & (adata.obs['total_counts'] > 500) & (adata.obs['total_counts'] < 10000)
+keep = (adata.obs['pct_counts_mt'] > mt_cutoffs[0]) & (adata.obs['pct_counts_mt'] < mt_cutoffs[1]) & (adata.obs['total_counts'] > total_counts_cutoffs[0]) & (adata.obs['total_counts'] < total_counts_cutoffs[1])
 print("Removed cells: %d"%(adata.n_obs - sum(keep)))
-
-#keep = (adata.obs['pct_counts_mt'] < 5) & (adata.obs['total_counts'] < 10000) # show that total counts & genes are directly related; therefore, you really only need one cut-off
-#print("Removed cells: %d"%(adata.n_obs - sum(keep)))
 
 # Actually do the filtering
 adata = adata[keep, :]
@@ -110,10 +114,10 @@ adata.shape
 # Check to make sure filters worked
 with PdfPages('figures/scatter_total_counts_pct_mt_after_cutoffs.pdf') as pp:
   ax1 = sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', show=False)
-  ax1.axhline(y=0.001, color='red', linestyle='--')
-  ax1.axhline(y=12, color='red', linestyle='--')
-  ax1.axvline(x=500, color = 'red', linestyle='--')
-  ax1.axvline(x=10000, color = 'red', linestyle='--')
+  ax1.axhline(y=mt_cutoffs[0], color='red', linestyle='--')
+  ax1.axhline(y=mt_cutoffs[1], color='red', linestyle='--')
+  ax1.axvline(x=total_counts_cutoffs[0], color = 'red', linestyle='--')
+  ax1.axvline(x=total_counts_cutoffs[1], color = 'red', linestyle='--')
   pp.savefig()
   plt.close()
 
@@ -135,7 +139,7 @@ adata = adata[:, adata.var.highly_variable]
 adata
 
 # Regress out effects of total counts per cell and the percentage of mitochondrial genes expressed
-sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
+# sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
 
 # Scale each gene to unit variance
 sc.pp.scale(adata, max_value=10)
@@ -160,7 +164,7 @@ sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], save ='.pdf')
 sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], use_raw=False, save='_V2.pdf') # scaled and corrected gene expression values
 
 # Clustering
-sc.tl.leiden(adata, resolution=0.5) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
+sc.tl.leiden(adata, resolution=0.6) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
 sc.pl.umap(adata, color=['leiden', 'CD3D', 'NKG7'], save='_leiden.pdf')
 
 # Finding marker genes
@@ -199,11 +203,32 @@ pd.concat(dfs, axis=1).to_csv('rank_genes_similar_to_what_we_had_before.csv')
 
 
 # Define a list of marker genes (literature markers)
-marker_genes = ['IL7R', 'CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ', 'CD14',
-                'LGALS3', 'S100A8', 'GNLY', 'NKG7', 'KLRB1',
-                'FCGR3A', 'MS4A7', 'FCER1A', 'CST3', 'PPBP']
+genes_dict = {'B-cell': ['CD79A', 'MS4A1'],
+                     'T-cell': ['CD3D'],
+                     'T-cell CD8+': ['CD8A', 'CD8B'],
+                     'NK': ['GNLY', 'NKG7'],
+                     'Myeloid': ['CST3', 'LYZ'],
+                     'Monocytes': ['FCGR3A'],
+                     'Dendritic': ['FCER1A'],
+                     'Platelet': ['PPBP']}
 
+
+# Make sure they are in the top 6000 highly variable genes
+genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in genes_dict}
+
+# For functions that need a list!
+marker_genes = [j for i in genes_dict.values() for j in i]
+
+
+## UMAP
 sc.pl.umap(adata, color=marker_genes, save='_with_marker_genes.pdf')
+
+## Dotplot
+#group_colors = dict(zip(adata.obs['leiden'].cat.categories, cm.tab10.colors))
+#sc.pl.dotplot(adata, genes_dict, groupby='leiden', group_colors=group_colors, save='with_marker_genes_dotplot.pdf')
+
+## Or stacked violins
+sc.pl.stacked_violin(adata, genes_dict, groupby='leiden', save='_with_marker_genes_stacked_violin.pdf')
 
 
 # Show the 10 top ranked genes per cluster
@@ -225,6 +250,11 @@ sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8, save='marker_genes_
 
 # Compare genes across groups
 sc.pl.violin(adata, ['CD3D', 'NKG7', 'PPBP'], groupby='leiden', save='_three_genes.pdf')
+
+
+#----------------------------------------------
+# Determining the identity of cell types
+#----------------------------------------------
 
 # Identify cell types
 new_cluster_names = [
@@ -250,12 +280,4 @@ sc.pl.stacked_violin(adata, marker_genes, groupby='leiden', save='V2.pdf')
 sc.pl.dotplot(adata, marker_genes, groupby='leiden', save='pdf')
 sc.pl.heatmap(adata, marker_genes, groupby='leiden', save='.pdf')
 
-marker_genes_dict = {'B-cell': ['CD79A', 'MS4A1'],
-                     'T-cell': 'CD3D',
-                     'T-cell CD8+': ['CD8A', 'CD8B'],
-                     'NK': ['GNLY', 'NKG7'],
-                     'Myeloid': ['CST3', 'LYZ'],
-                     'Monocytes': ['FCGR3A'],
-                     'Dendritic': ['FCER1A']}
-
-sc.pl.heatmap(adata, marker_genes_dict, groupby='leiden', save='_V2.pdf')
+sc.pl.heatmap(adata, genes_dict, groupby='leiden', save='_V2.pdf')
