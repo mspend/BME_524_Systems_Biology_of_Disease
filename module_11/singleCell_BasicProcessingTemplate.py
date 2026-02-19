@@ -90,8 +90,12 @@ sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', save ='_total_counts_p
 sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_counts_genes.pdf')
 
 # Set up the cutoffs
-mt_cutoffs = (0.001, 12)
-total_counts_cutoffs = (500, 10000)
+# This will depend on your data
+# 10X does a lot of filtering so the data already looks pretty good.
+# Dr. Plaisier says that often he wants his lower threshold for total_counts to be 2,000 or 5,000
+# However, this data 
+mt_cutoffs = (0.001, 7)
+total_counts_cutoffs = (500, 11000)
 
 # Visualize optimal cutoff values prior to filtering
 with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
