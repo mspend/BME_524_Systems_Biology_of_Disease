@@ -3,6 +3,7 @@
 
 # Ignore macOS metadata
 __pycache__/
+cache/
 
 # Ignore writeup files and plots generated as pdfs
 *.docx
