@@ -168,8 +168,23 @@ sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], save ='.pdf')
 sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], use_raw=False, save='_V2.pdf') # scaled and corrected gene expression values
 
 # Clustering
+# a larger resolution = more clusters
+# a smaller resolution = fewer clusters
 sc.tl.leiden(adata, resolution=0.6) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
-sc.pl.umap(adata, color=['leiden', 'CD3D', 'NKG7'], save='_leiden.pdf')
+sc.pl.umap(adata, color=['leiden', 'CD3D', 'IL7R', 'CCR7', 'CD14', 'LYZ', 'S100A4', 'MS4A1', 'CD8A', 'FCGR3A', 'NKG7','CST3','PPBP'], save='_leiden.pdf')
+
+# Helpful cell type markers
+# Naive CD4+ T: IL7R, CCR7
+# CD14+ Mono: CD14, LYZ
+# Memory CD4+: IL17R, S100A4
+# B cells: MS4A1
+# CD8+ T: CD8A
+# FCGR3A+ Mono: FCGR3A, MS4A7
+# Natural Killer (NK) cells: GNLY, NKG7
+# Dendritic cells: FCER1A, CST3
+# Platelet: PPBP
+
+
 
 # Finding marker genes
 #sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
@@ -180,7 +195,7 @@ sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save='_V2.pdf')
 sc.pl.rank_genes_groups_heatmap(adata, save='_marker_genes.pdf')
 
 
-# Write out CSV file wit clusters as different rows
+# Write out CSV file with clusters as different rows
 result = adata.uns['rank_genes_groups']
 groups = result['names'].dtype.names
 dfs = []
