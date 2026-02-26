@@ -40,7 +40,6 @@ import scanpy as sc
 import os
 
 import matplotlib
-from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -173,55 +172,19 @@ sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], use_raw=False, save='_V
 sc.tl.leiden(adata, resolution=0.6) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
 sc.pl.umap(adata, color=['leiden', 'CD3D', 'IL7R', 'CCR7', 'CD14', 'LYZ', 'S100A4', 'MS4A1', 'CD8A', 'FCGR3A', 'NKG7','CST3','PPBP'], save='_leiden.pdf')
 
-# Helpful cell type markers
-# Naive CD4+ T: IL7R, CCR7
-# CD14+ Mono: CD14, LYZ
-# Memory CD4+: IL17R, S100A4
-# B cells: MS4A1
-# CD8+ T: CD8A
-# FCGR3A+ Mono: FCGR3A, MS4A7
-# Natural Killer (NK) cells: GNLY, NKG7
-# Dendritic cells: FCER1A, CST3
-# Platelet: PPBP
 
 
 
-# Finding marker genes
-#sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
-#sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save='.pdf')
 
-sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon')
-sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save='_V2.pdf')
-sc.pl.rank_genes_groups_heatmap(adata, save='_marker_genes.pdf')
+#------------------------
+# Compute clustering
+#------------------------
 
+## Make output directory for marker genes
+if not os.path.exists('markergenes'):
+    os.mkdir('markergenes')
 
-# Write out CSV file with clusters as different rows
-result = adata.uns['rank_genes_groups']
-groups = result['names'].dtype.names
-dfs = []
-for group in groups:
-    tmp = pd.DataFrame({key: result[key][group] for key in ['names', 'logfoldchanges', 'pvals', 'pvals_adj']})
-    tmp['Cluster'] = group
-    dfs.append(tmp)
-
-pd.concat(dfs, axis=0).to_csv('rank_genes_similar_to_Seurat.csv')
-
-
-# Write out CSV file with clusters as different columns
-result = adata.uns['rank_genes_groups']
-groups = result['names'].dtype.names
-dfs = []
-for group in groups:
-    tmp = pd.DataFrame({key+'_'+group: result[key][group] for key in ['names', 'logfoldchanges', 'pvals', 'pvals_adj']})
-    tmp = tmp.sort_values('names_'+group)
-    tmp.index = tmp['names_'+group]
-    tmp = tmp.drop('names_'+group,axis=1)
-    dfs.append(tmp)
-
-pd.concat(dfs, axis=1).to_csv('rank_genes_similar_to_what_we_had_before.csv')
-
-
-# Define a list of marker genes (literature markers)
+## Define a list of marker genes (literature markers)
 genes_dict = {'B-cell': ['CD79A', 'MS4A1'],
                      'T-cell': ['CD3D'],
                      'T-cell CD8+': ['CD8A', 'CD8B'],
@@ -231,44 +194,33 @@ genes_dict = {'B-cell': ['CD79A', 'MS4A1'],
                      'Dendritic': ['FCER1A'],
                      'Platelet': ['PPBP']}
 
-
 # Make sure they are in the top 6000 highly variable genes
 genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in genes_dict}
 
-# For functions that need a list!
+
+## Do the clustering and plotting
+df_all = []
+sc.tl.leiden(adata, resolution = 0.6)
+sc.pl.dotplot(adata, genes_dict, groupby = 'leiden', save = '_leiden.pdf', show=False)
+sc.pl.umap(adata, color = ['leiden'], use_raw = False, show = False, save = '_leiden.pdf')
+sc.tl.rank_genes_groups(adata, 'leiden', corr_method = 'benjamini-hochberg', method = 'wilcoxon')
+sc.pl.rank_genes_groups(adata, n_genes = 5, show = False, sharey = False, save = '.pdf')
+with open('markergenes/markergenes_dataframe.csv', 'w') as outFile:
+    for x in range(max([int(i) for i in list(adata.obs['leiden'])])+1):
+        df = sc.get.rank_genes_groups_df(adata, str(x), pval_cutoff = 0.05, log2fc_min = 1).sort_values(by = 'logfoldchanges', ascending = False)
+        df_all.append(df)
+        df['cluster'] = [x]*df.shape[0]
+        if x == 0:
+            df.to_csv(outFile, header = True)
+        else:
+            df.to_csv(outFile, header = False)
+
+# Concatenate the pandas DataFrames
+df_complete = pd.concat(df_all)
+
+# Subset DEGs to the marker genes
 marker_genes = [j for i in genes_dict.values() for j in i]
-
-
-## UMAP
-sc.pl.umap(adata, color=marker_genes, save='_with_marker_genes.pdf')
-
-## Dotplot
-#group_colors = dict(zip(adata.obs['leiden'].cat.categories, cm.tab10.colors))
-#sc.pl.dotplot(adata, genes_dict, groupby='leiden', group_colors=group_colors, save='with_marker_genes_dotplot.pdf')
-
-## Or stacked violins
-sc.pl.stacked_violin(adata, genes_dict, groupby='leiden', save='_with_marker_genes_stacked_violin.pdf')
-
-
-# Show the 10 top ranked genes per cluster
-pd.DataFrame(adata.uns['rank_genes_groups']['names']).head(5)
-
-# Get a table with scores and results
-result = adata.uns['rank_genes_groups']
-groups = result['names'].dtype.names
-pd.DataFrame(
-    {group + '_' + key[:1]: result[key][group]
-    for group in groups for key in ['names', 'pvals']}).head(5)
-
-# Compare to a single cluster
-sc.tl.rank_genes_groups(adata, 'leiden', groups=['0'], reference='1', method='wilcoxon')
-sc.pl.rank_genes_groups(adata, groups=['0'], n_genes=20)
-
-# More detailed
-sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8, save='marker_genes_violin.pdf')
-
-# Compare genes across groups
-sc.pl.violin(adata, ['CD3D', 'NKG7', 'PPBP'], groupby='leiden', save='_three_genes.pdf')
+df_complete.loc[df_complete['names'].isin(marker_genes)].to_csv('markergenes/marker_genes_overlap.csv')
 
 
 #----------------------------------------------
@@ -283,20 +235,9 @@ new_cluster_names = [
     'Dendritic', 'Platelet']
 adata.rename_categories('leiden', new_cluster_names)
 
-sc.pl.umap(adata, color='leiden', legend_loc='on data', title='', frameon=False, save='_new_idents.pdf')
+# Make UMAP
+sc.pl.umap(adata, color='leiden', legend_loc='on data', title='', frameon=False, save='_new_idents.pdf', show=False)
 
-# other marker gene visualization
-sc.pl.violin(adata, ['CD3D', 'NKG7', 'PPBP'], groupby='leiden', save='_V2')
-sc.pl.violin(adata, ['CD3D', 'NKG7', 'PPBP'], groupby='leiden', rotation=90, save='_V3')
-sc.pl.violin(adata, marker_genes, groupby='leiden', rotation=90, save='_V4')
-
-for gene in marker_genes[0:5]:
-    sc.pl.violin(adata, gene, groupby='leiden', rotation=90, save = '_'+gene+'.pdf')
-
-sc.pl.stacked_violin(adata, marker_genes, groupby='leiden', swap_axes = True, save='.pdf')
-sc.pl.stacked_violin(adata, marker_genes, groupby='leiden', save='V2.pdf')
-
-sc.pl.dotplot(adata, marker_genes, groupby='leiden', save='pdf')
-sc.pl.heatmap(adata, marker_genes, groupby='leiden', save='.pdf')
-
-sc.pl.heatmap(adata, genes_dict, groupby='leiden', save='_V2.pdf')
+# Additional useful plots
+sc.pl.dotplot(adata, marker_genes, groupby='leiden', save='_Final.pdf', show=False)
+sc.pl.heatmap(adata, genes_dict, groupby='leiden', save='_Final.pdf', show=False)
