@@ -13,3 +13,4 @@ cache/
 
 # Ignore data files that are too big to push to git
 /module_12/gbm_data/*
+/module_12/gbm_data.zip

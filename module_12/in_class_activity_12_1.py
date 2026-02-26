@@ -33,7 +33,7 @@ genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1', 'VWF'],
 
 ## 1. (5pts) Set the 'sid' variable below with your student ID
 #     - Relace the text and greater than and less than symbol with your student ID, important for grading
-sid = 1233327240 
+sid = <sid>
 
 
 
