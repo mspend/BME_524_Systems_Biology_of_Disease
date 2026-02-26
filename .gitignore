@@ -9,6 +9,7 @@ cache/
 *.docx
 *.pdf
 *.xlsx
+*.csv
 
 # Ignore these specific files
 
