@@ -11,10 +11,5 @@ cache/
 *.xlsx
 *.csv
 
-# Ignore these specific files
-
-
-# these data files are optional bc the geoparse package can load them in
-
-
-# output files I don't need to push to git
+# Ignore data files that are too big to push to git
+/module_12/gbm_data/*
