@@ -170,7 +170,7 @@ sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], use_raw=False, save='_V
 # a larger resolution = more clusters
 # a smaller resolution = fewer clusters
 sc.tl.leiden(adata, resolution=0.6) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
-sc.pl.umap(adata, color=['leiden', 'CD3D', 'IL7R', 'CCR7', 'CD14', 'LYZ', 'S100A4', 'MS4A1', 'CD8A', 'FCGR3A', 'NKG7','CST3','PPBP'], save='_leiden.pdf')
+sc.pl.umap(adata, color=['leiden', 'CD3D', 'NKG7'], save='_leiden.pdf')
 
 
 
