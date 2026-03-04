@@ -17,7 +17,6 @@
 ## mention who built it. Thanks. :-)                    ##
 ##########################################################
 
-
 ## 1. (5pts) Set the 'sid' variable below with your student ID
 #     - Relace the text and greater than and less than symbol with your student ID, important for grading
 sid = ##########
@@ -49,7 +48,6 @@ if not os.path.exists('markergenes'):
 #    C. (5pts) Save shape of adata into a variable 'original_shape' as demonstration of correct loading of data
 adata = sc.read_10x_mtx('data/filtered_gene_bc_matrices/', var_names = 'gene_symbols')
 original_shape = adata.shape
-
 
 ## 4. (5pts) Add percent mitochondrial transcripts to metadata and use that alongside total_counts to filter cells
 #    A. (5pts) Calculate QC metric of percent mitochondrial transcripts and save as 'mt' in meta data
@@ -92,8 +90,10 @@ sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_count
 #    D. Save the shape of 'adata' into a variable called 'cleaned_shape'
 
 # Set cutoffs appropriately
+# I tried upper mt_cutoffs of (30, 50, 60, 70, 80) before settling on 20
+# I tried the upper total count cutoff in intervals of 10 from 20k to 100k
 mt_cutoffs = (1, 20)
-total_counts_cutoffs = (5000, 95000)
+total_counts_cutoffs = (2000, 100000)
 
 # Visualize optimal cutoff values prior to filtering
 with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
@@ -136,32 +136,12 @@ sc.pp.log1p(adata)
 sc.pp.highly_variable_genes(adata, n_top_genes=6000) # set your own number of highly variable genes
 sc.pl.highly_variable_genes(adata, save='.pdf')
 
-# Save raw data prior to subsetting data to highly variable genes
-adata.raw = adata
-
 # Subset data for highly variable genes
 adata = adata[:, adata.var.highly_variable]
 hvg_shape = adata.shape
 
-# Regress out effects of total counts per cell and the percentage of mitochondrial genes expressed
-sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
-
-# Scale each gene to unit variance
-sc.pp.scale(adata, max_value=10)
-
-# PCA
-sc.tl.pca(adata, svd_solver='arpack')
-sc.pl.pca(adata, color='CD3D', save = '.pdf')
-sc.pl.pca_variance_ratio(adata, log=True, save = '.pdf')
-
-# Compute the neighborhood graph
-sc.pp.neighbors(adata, n_neighbors=5, n_pcs=40)
-
-# Visualize cells in 2D
-sc.tl.umap(adata)
-
 ## Useful marker gene sets
-genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1'],
+genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1', 'VWF'],
               'B': ['CD79A','CD79B', 'CD19', 'IGHG1'],
               'T': ['CD3D', 'CD8A', 'CD8B'],
               'NK': ['NCAM1','NKG7','GZMB'],
@@ -175,7 +155,22 @@ genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1'],
 # Make sure the marker genes are in the top 6000 highly variable genes
 genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in genes_dict}
 
+# Scale each gene to unit variance
+sc.pp.scale(adata, max_value=10)
 
+# PCA
+sc.tl.pca(adata, svd_solver='arpack')
+sc.pl.pca(adata, color='CD3D', save = '.pdf')
+sc.pl.pca_variance_ratio(adata, log=True, save = '.pdf')
+adata
+
+# Compute the neighborhood graph
+sc.pp.neighbors(adata, n_neighbors=5, n_pcs=40)
+
+# Visualize cells in 2D
+sc.tl.umap(adata)
+sc.pl.umap(adata, color=['CD3D', 'NKG7', 'PPBP'], save ='.pdf')
+sc.pl.umap(adata, color=['CD3D', 'NKG7', 'PPBP'], use_raw=False, save='_V2.pdf') # scaled and corrected gene expression values
 
 ## 7. (15pts) Compute Leiden clustering for a range of clustering resolutions [0.1, 0.2, 0.3, 0.4, 0.5]
 #   A. (15pts) Set up a for loop that computes the code below and writes out all the files with resolution
@@ -230,36 +225,43 @@ for res in resolutions:
 #     - Dotplot with new labels: 'dotplot__Final.pdf'
 #     - Heatmap with genes_dict: 'heatmap_Final.pdf'
 
-
-sc.pl.umap(adata, color=['MKI67', 'NKG7', 'CD3D', 'VWF'], use_raw=False, save='_temp.pdf') # scaled and corrected gene expression values
-
-
-
 res1 = 0.3
+
+## Compute clustering and write out useful plots and csv files of marker genes
+
+# Set up variables to hold data
+df_all = []
+# Cluster!
 sc.tl.leiden(adata, resolution = res1)
 # save the number of clusters into the variable 'final_cluster_num':
 final_cluster_num = adata.obs['leiden'].describe()['unique']
 
-
-# must be in order of cluster number
-new_cluster_names = {
-    '???',
-    'Dendritic',
-    'Proliferating_Macrophage', #5
-    'Endothelial', #8
-    'T',
-    'NK',
-    'B', #11
-    
-    'Neutrophil',
-    'Macrophage',
-
-    'Macrophage_Microglia',
-    'Microglia'}
-
-adata.rename_categories('leiden', new_cluster_names)
-
 # Plot
 sc.pl.dotplot(adata, genes_dict, groupby = 'leiden', save = '__Final.pdf', show=False)
 sc.pl.umap(adata, color = ['leiden'], use_raw = False, show = False, save = '_new_idents.pdf')
+# Find differentially expressed genes per cluster
+sc.tl.rank_genes_groups(adata, 'leiden', corr_method = 'benjamini-hochberg', method = 'wilcoxon')
+sc.pl.rank_genes_groups(adata, n_genes = 5, show = False, sharey = False, save = '_.pdf')
+# Write out differentially expressed genes per cluster
+with open('markergenes/markergenes_dataframe.csv', 'w') as outFile:
+    for x in range(max([int(i) for i in list(adata.obs['leiden'])])+1):
+        df = sc.get.rank_genes_groups_df(adata, str(x), pval_cutoff = 0.05, log2fc_min = 1).sort_values(by = 'logfoldchanges', ascending = False)
+        df_all.append(df)
+        df['cluster'] = [x]*df.shape[0]
+        if x == 0:
+            df.to_csv(outFile, header = True)
+        else:
+            df.to_csv(outFile, header = False)
+
+# Concatenate the pandas DataFrames
+df_complete = pd.concat(df_all)
+
+# Subset differentially expressed genes per cluster based on established marker
+# genes from cell types of interest
+marker_genes = [j for i in genes_dict.values() for j in i]
+df_complete.loc[df_complete['names'].isin(marker_genes)].to_csv('markergenes/marker_genes_overlap.csv')
+
 sc.pl.heatmap(adata, genes_dict, groupby='leiden', save='_Final.pdf', show=False)
+
+
+
