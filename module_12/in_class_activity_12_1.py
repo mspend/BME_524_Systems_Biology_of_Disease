@@ -20,7 +20,7 @@
 
 ## 1. (5pts) Set the 'sid' variable below with your student ID
 #     - Relace the text and greater than and less than symbol with your student ID, important for grading
-sid = ##########
+# sid = ##########
 
 ## 2. (5pts) Load up the packages you will need to run
 #     A. Import all the packages
