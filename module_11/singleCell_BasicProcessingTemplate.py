@@ -17,8 +17,9 @@
 ## mention who built it. Thanks. :-)                    ##
 ##########################################################
 
-# on command line
-# cd Dropbox\ \(ASU\)/pbmc
+# Relace the text and greater than and less than symbol with your student ID, important for grading
+sid = ######## # Change to your student ID
+
 
 # Install required packages
 #  !pip install scanpy
