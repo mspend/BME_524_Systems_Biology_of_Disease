@@ -186,35 +186,36 @@ genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in 
 
 ## Compute clustering and write out useful plots and csv files of marker genes
 
-# Set up variables to hold data
-df_all = []
-# Cluster!
-sc.tl.leiden(adata, resolution = 0.1)
-# Plot
-sc.pl.dotplot(adata, genes_dict, groupby = 'leiden', save = '_leiden.pdf', show=False)
-sc.pl.umap(adata, color = ['leiden'], use_raw = False, show = False, save = '_leiden.pdf')
-# Find differentially expressed genes per cluster
-sc.tl.rank_genes_groups(adata, 'leiden', corr_method = 'benjamini-hochberg', method = 'wilcoxon')
-sc.pl.rank_genes_groups(adata, n_genes = 5, show = False, sharey = False, save = '_.pdf')
-# Write out differentially expressed genes per cluster
-with open('markergenes/markergenes_dataframe.csv', 'w') as outFile:
-    for x in range(max([int(i) for i in list(adata.obs['leiden'])])+1):
-        df = sc.get.rank_genes_groups_df(adata, str(x), pval_cutoff = 0.05, log2fc_min = 1).sort_values(by = 'logfoldchanges', ascending = False)
-        df_all.append(df)
-        df['cluster'] = [x]*df.shape[0]
-        if x == 0:
-            df.to_csv(outFile, header = True)
-        else:
-            df.to_csv(outFile, header = False)
+resolutions = [0.1, 0.2, 0.3, 0.4, 0.5]
+for res in resolutions:
+    # Set up variables to hold data
+    df_all = []
+    # Cluster!
+    sc.tl.leiden(adata, resolution = res)
+    # Plot
+    sc.pl.dotplot(adata, genes_dict, groupby = 'leiden', save = f'_leiden_{res}.pdf', show=False)
+    sc.pl.umap(adata, color = ['leiden'], use_raw = False, show = False, save = f'_leiden_{res}.pdf')
+    # Find differentially expressed genes per cluster
+    sc.tl.rank_genes_groups(adata, 'leiden', corr_method = 'benjamini-hochberg', method = 'wilcoxon')
+    sc.pl.rank_genes_groups(adata, n_genes = 5, show = False, sharey = False, save = f'_{res}.pdf')
+    # Write out differentially expressed genes per cluster
+    with open(f'markergenes/markergenes_dataframe_{res}.csv', 'w') as outFile:
+        for x in range(max([int(i) for i in list(adata.obs['leiden'])])+1):
+            df = sc.get.rank_genes_groups_df(adata, str(x), pval_cutoff = 0.05, log2fc_min = 1).sort_values(by = 'logfoldchanges', ascending = False)
+            df_all.append(df)
+            df['cluster'] = [x]*df.shape[0]
+            if x == 0:
+                df.to_csv(outFile, header = True)
+            else:
+                df.to_csv(outFile, header = False)
 
-# Concatenate the pandas DataFrames
-df_complete = pd.concat(df_all)
+    # Concatenate the pandas DataFrames
+    df_complete = pd.concat(df_all)
 
-# Subset differentially expressed genes per cluster based on established marker
-# genes from cell types of interest
-marker_genes = [j for i in genes_dict.values() for j in i]
-df_complete.loc[df_complete['names'].isin(marker_genes)].to_csv('markergenes/marker_genes_overlap.csv')
-
+    # Subset differentially expressed genes per cluster based on established marker
+    # genes from cell types of interest
+    marker_genes = [j for i in genes_dict.values() for j in i]
+    df_complete.loc[df_complete['names'].isin(marker_genes)].to_csv(f'markergenes/marker_genes_overlap_{res}.csv')
 
 
 ## 8. (25pts) Choose a clustering resolution, redo clustering, relabel clusters, and write out final plots
