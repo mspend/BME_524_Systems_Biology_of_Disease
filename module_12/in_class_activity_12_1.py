@@ -105,8 +105,8 @@ sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_count
 #    D. Save the shape of 'adata' into a variable called 'cleaned_shape'
 
 # Set cutoffs appropriately
-mt_cutoffs = (<lower>, <upper>)
-total_counts_cutoffs = (<lower>, <upper>)
+mt_cutoffs = (1, 20)
+total_counts_cutoffs = (5000, 95000)
 
 # Visualize optimal cutoff values prior to filtering
 with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
@@ -118,7 +118,13 @@ with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
   pp.savefig()
   plt.close()
 
+# Remove cells that have too many mitochondrial genes expressed or too many total counts
+keep = (adata.obs['pct_counts_mt'] > mt_cutoffs[0]) & (adata.obs['pct_counts_mt'] < mt_cutoffs[1]) & (adata.obs['total_counts'] > total_counts_cutoffs[0]) & (adata.obs['total_counts'] < total_counts_cutoffs[1])
+print("Removed cells: %d"%(adata.n_obs - sum(keep)))
 
+# Actually do the filtering
+adata = adata[keep, :]
+cleaned_shape = adata.shape
 
 ## 6. (15pts) Subset to the 6,000 most highly variable genes, run PCA, and compute the neighborhood graph
 #    A. Compute the top 6,000 most highly variable genes, and subset 'adata' based on the gene list
