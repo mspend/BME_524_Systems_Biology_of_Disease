@@ -17,19 +17,6 @@
 ## mention who built it. Thanks. :-)                    ##
 ##########################################################
 
-## Useful marker gene sets
-genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1', 'VWF'],
-              'B': ['CD79A','CD79B', 'CD19', 'IGHG1'],
-              'T': ['CD3D', 'CD8A', 'CD8B'],
-              'NK': ['NCAM1','NKG7','GZMB'],
-              'Dendritic': ['HLA-DQA1', 'HLA-DPB1'],
-              'Neutrophil': ['S100A9', 'IL1R2', 'FPR2'],
-              'Macrophage': ['APOC1', 'S100A8'],
-              'Proliferating_Macrophage': ['TOP2A','PCNA','MKI67'],
-              'Macrophage_Microglia': ['F13A1','CD163'],
-              'Microglia': ['P2RY12']}
-
-
 
 ## 1. (5pts) Set the 'sid' variable below with your student ID
 #     - Relace the text and greater than and less than symbol with your student ID, important for grading
@@ -138,6 +125,55 @@ cleaned_shape = adata.shape
 #             n_neighbors = 15 cells is reasonable
 #    E. (5pts) Ensure that the marker genes in our 'genes_dict' are all in the highly variable genes (useful code below):
 #       genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in genes_dict}
+
+# Normalize so that counts become comparable among cells
+sc.pp.normalize_total(adata, target_sum=1e4)
+
+# Logarithmize the data
+sc.pp.log1p(adata)
+
+# Identify and plot highly variable genes
+sc.pp.highly_variable_genes(adata, n_top_genes=6000) # set your own number of highly variable genes
+sc.pl.highly_variable_genes(adata, save='.pdf')
+
+# Save raw data prior to subsetting data to highly variable genes
+adata.raw = adata
+
+# Subset data for highly variable genes
+adata = adata[:, adata.var.highly_variable]
+hvg_shape = adata.shape
+
+# Regress out effects of total counts per cell and the percentage of mitochondrial genes expressed
+sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
+
+# Scale each gene to unit variance
+sc.pp.scale(adata, max_value=10)
+
+# PCA
+sc.tl.pca(adata, svd_solver='arpack')
+sc.pl.pca(adata, color='CD3D', save = '.pdf')
+sc.pl.pca_variance_ratio(adata, log=True, save = '.pdf')
+
+# Compute the neighborhood graph
+sc.pp.neighbors(adata, n_neighbors=5, n_pcs=40)
+
+# Visualize cells in 2D
+sc.tl.umap(adata)
+
+## Useful marker gene sets
+genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1'],
+              'B': ['CD79A','CD79B', 'CD19', 'IGHG1'],
+              'T': ['CD3D', 'CD8A', 'CD8B'],
+              'NK': ['NCAM1','NKG7','GZMB'],
+              'Dendritic': ['HLA-DQA1', 'HLA-DPB1'],
+              'Neutrophil': ['S100A9', 'IL1R2', 'FPR2'],
+              'Macrophage': ['APOC1', 'S100A8'],
+              'Proliferating_Macrophage': ['TOP2A','PCNA','MKI67'],
+              'Macrophage_Microglia': ['F13A1','CD163'],
+              'Microglia': ['P2RY12']}
+
+# Make sure the marker genes are in the top 6000 highly variable genes
+genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in genes_dict}
 
 
 
