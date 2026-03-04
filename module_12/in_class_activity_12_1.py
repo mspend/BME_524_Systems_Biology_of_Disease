@@ -231,4 +231,35 @@ for res in resolutions:
 #     - Heatmap with genes_dict: 'heatmap_Final.pdf'
 
 
+sc.pl.umap(adata, color=['MKI67', 'NKG7', 'CD3D', 'VWF'], use_raw=False, save='_temp.pdf') # scaled and corrected gene expression values
 
+
+
+res1 = 0.3
+sc.tl.leiden(adata, resolution = res1)
+# save the number of clusters into the variable 'final_cluster_num':
+final_cluster_num = adata.obs['leiden'].describe()['unique']
+
+
+# must be in order of cluster number
+new_cluster_names = {
+    '???',
+    'Dendritic',
+    'Proliferating_Macrophage', #5
+    'Endothelial', #8
+    'T',
+    'NK',
+    'B', #11
+    
+    'Neutrophil',
+    'Macrophage',
+
+    'Macrophage_Microglia',
+    'Microglia'}
+
+adata.rename_categories('leiden', new_cluster_names)
+
+# Plot
+sc.pl.dotplot(adata, genes_dict, groupby = 'leiden', save = '__Final.pdf', show=False)
+sc.pl.umap(adata, color = ['leiden'], use_raw = False, show = False, save = '_new_idents.pdf')
+sc.pl.heatmap(adata, genes_dict, groupby='leiden', save='_Final.pdf', show=False)
