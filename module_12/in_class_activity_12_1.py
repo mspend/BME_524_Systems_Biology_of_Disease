@@ -33,14 +33,25 @@ genes_dict = {'Endothelial': ['VWF', 'CD34', 'PECAM1', 'VWF'],
 
 ## 1. (5pts) Set the 'sid' variable below with your student ID
 #     - Relace the text and greater than and less than symbol with your student ID, important for grading
-sid = <replace_with_your_student_id>
-
-
+sid = ##########
 
 ## 2. (5pts) Load up the packages you will need to run
 #     A. Import all the packages
+import os
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
+## Make output directory for marker genes
+if not os.path.exists('figures'):
+    os.mkdir('figures')
 
+## Make output directory for marker genes
+if not os.path.exists('markergenes'):
+    os.mkdir('markergenes')
 
 ## 3. (10pts) Load the scRNA-seq data from GSE162631 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE162631)
 #    A. Unzip the gbm_data.zip file
@@ -49,13 +60,34 @@ sid = <replace_with_your_student_id>
 #        need to be sure path points at folder containing three files:  1) 'barcodes.tsv.gz', 2) 'features.tsv.gz',
 #        and 3) 'matrix.mtx.gz'
 #    C. (5pts) Save shape of adata into a variable 'original_shape' as demonstration of correct loading of data
+adata = sc.read_10x_mtx('data/filtered_gene_bc_matrices/', var_names = 'gene_symbols')
+original_shape = adata.shape
 
 
-
-## 4. (5pts) Add percent mitochondrial transcripts to meta data and use that alongside total_counts to filter cells
+## 4. (5pts) Add percent mitochondrial transcripts to metadata and use that alongside total_counts to filter cells
 #    A. (5pts) Calculate QC metric of percent mitochondrial transcripts and save as 'mt' in meta data
 
+# Basic filtering
+sc.pp.filter_cells(adata, min_genes=200) # filter out cells that have less than 200 genes
+sc.pp.filter_genes(adata, min_cells=3) # filter out genes that are detected in less than 3 cells
+adata.shape
 
+# Generate quality control metrics
+adata.var['mt'] = adata.var_names.str.startswith('MT-')  # annotate the group of mitochondrial genes as 'mt'
+sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], percent_top=None, log1p=False, inplace=True)
+
+# High proportions of mito genes are indicative of poor-quality cells (Islam et al. 2014; Ilicic et al. 2016), possibly because of loss of cytoplasmic RNA from perforated cells
+adata.var[adata.var['mt']] # look at the mitochrondrial genes
+adata.obs['pct_counts_mt']
+adata.obs['pct_counts_mt'].describe()
+
+# Violin plots of qc metrics
+sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt'],
+             jitter=0.4, multi_panel=True, save= '.pdf') # can also save as png
+
+# Scatter plots of qc metrics
+sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', save ='_total_counts_pct_mt.pdf')
+sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_counts_genes.pdf')
 
 ## 5. (20pts) Add percent mitochondrial transcripts to meta data and use that alongside total_counts to filter cells
 #    A. Set cutoff variables to something reasonable:
@@ -109,11 +141,6 @@ with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
 #      - (each file worth 3pts, per iteration) For example, 'dotplot__leiden_0.1.pdf', 'umap_leiden_0.1.pdf',
 #        'rank_genes_groups_leiden_0.1.pdf', 'markergenes/markergenes_dataframe_0.1.csv',
 #        and 'markergenes/marker_genes_overlap_0.1.csv'
-
-## Make output directory for marker genes, this only needs to be done once (not in for loop)
-if not os.path.exists('markergenes'):
-    os.mkdir('markergenes')
-
 
 ## Compute clustering and write out useful plots and csv files of marker genes
 
