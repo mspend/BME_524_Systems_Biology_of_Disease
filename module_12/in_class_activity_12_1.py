@@ -231,7 +231,7 @@ for res in resolutions:
 
 # sc.pl.umap(adata, color=['S100A9', 'VWF', 'CD3D', 'GZMB' ], use_raw=False, save=None) # scaled and corrected gene expression values
 
-res1 = 0.5
+res1 = 0.3
 sc.tl.leiden(adata, resolution = res1)
 # save the number of clusters into the variable 'final_cluster_num':
 final_cluster_num = adata.obs['leiden'].describe()['unique']
@@ -242,14 +242,10 @@ new_cluster_names = [
     'Macrophage',
     'Microglia',
     'Dendritic',
-    'Dendritic',
     'Macrophage_Microglia',
+    'Proliferating_Macrophage',
     '???',
-    'Proliferating_Macrophage',
     'Neutrophil',
-    'Macrophage',
-    'Neutrophil',
-    'Proliferating_Macrophage',
     'Endothelial',
     'T',
     'NK',
