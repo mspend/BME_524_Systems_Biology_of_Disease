@@ -64,7 +64,7 @@ adata = sc.read_10x_mtx(
 
 adata.var_names_make_unique()  # this is unnecessary if using `var_names='gene_ids'` in `sc.read_10x_mtx`
 adata
-adata.shape # see dimensions of adata object (cells,genes)
+adata.shape # see dimensions of adata object (cells,genes) aka (obs, vars)
 # adata is an AnnData object that can be slices like a dataframe
 
 #------------------------
@@ -95,10 +95,9 @@ sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_count
 
 # Set up the cutoffs
 # This will depend on your data
-# 10X does a lot of filtering so the data already looks pretty good.
 # Dr. Plaisier says that often he wants his lower threshold for total_counts to be 2,000 or 5,000
-mt_cutoffs = (0.001, 7)
-total_counts_cutoffs = (500, 11000)
+mt_cutoffs = (1, 25)
+total_counts_cutoffs = (2100, 110000)
 
 # Visualize optimal cutoff values prior to filtering
 with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
@@ -146,7 +145,7 @@ adata = adata[:, adata.var.highly_variable]
 adata
 
 # Regress out effects of total counts per cell and the percentage of mitochondrial genes expressed
-# sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
+sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
 
 # Scale each gene to unit variance
 sc.pp.scale(adata, max_value=10)
