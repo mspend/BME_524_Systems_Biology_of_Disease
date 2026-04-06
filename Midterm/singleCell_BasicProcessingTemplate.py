@@ -18,7 +18,7 @@
 ##########################################################
 
 # Relace the text and greater than and less than symbol with your student ID, important for grading
-sid =  # Change to your student ID
+sid = '' # Change to your student ID
 
 
 # Install required packages
@@ -44,17 +44,21 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+## Make output directory for marker genes
+if not os.path.exists('figures'):
+    os.mkdir('figures')
+
+## Make output directory for marker genes
+if not os.path.exists('markergenes'):
+    os.mkdir('markergenes')
 
 #------------------------
 # Load data
 #-----------------------
-# change working directory in python
-#os.getcwd()
-#os.chdir("/Users/samanthaoconnor/Dropbox (ASU)/pbmc")
 
 # Build scanpy data object
 adata = sc.read_10x_mtx(
-    'data/filtered_gene_bc_matrices/hg19/',   # the directory with the `.mtx` file
+    'data/filtered_gene_bc_matrices/',   # the directory with the `.mtx` file
     var_names='gene_symbols',                 # use gene symbols for the variable names (variables-axis index)
     cache=True)
 
@@ -90,8 +94,11 @@ sc.pl.scatter(adata, x='total_counts', y='pct_counts_mt', save ='_total_counts_p
 sc.pl.scatter(adata, x='total_counts', y='n_genes_by_counts', save='_total_counts_genes.pdf')
 
 # Set up the cutoffs
-mt_cutoffs = (0.001, 12)
-total_counts_cutoffs = (500, 10000)
+# This will depend on your data
+# 10X does a lot of filtering so the data already looks pretty good.
+# Dr. Plaisier says that often he wants his lower threshold for total_counts to be 2,000 or 5,000
+mt_cutoffs = (0.001, 7)
+total_counts_cutoffs = (500, 11000)
 
 # Visualize optimal cutoff values prior to filtering
 with PdfPages('figures/scatter_total_counts_pct_mt_with_cutoffs.pdf') as pp:
@@ -164,6 +171,8 @@ sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], save ='.pdf')
 sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], use_raw=False, save='_V2.pdf') # scaled and corrected gene expression values
 
 # Clustering
+# a larger resolution = more clusters
+# a smaller resolution = fewer clusters
 sc.tl.leiden(adata, resolution=0.6) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
 sc.pl.umap(adata, color=['leiden', 'CD3D', 'NKG7'], save='_leiden.pdf')
 
