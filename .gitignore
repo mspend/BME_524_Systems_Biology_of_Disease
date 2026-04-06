@@ -16,3 +16,5 @@ cache/
 module_11/data_pbmc.zip
 /module_12/data/*
 /module_12/gbm_data.zip
+/module_15/data/U5_normalized_ensembl.loom
+/module_15/data_ccAFv2.zip
