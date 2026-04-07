@@ -166,38 +166,34 @@ sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
 
 # Visualize cells in 2D
 sc.tl.umap(adata)
-sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], save ='.pdf')
-sc.pl.umap(adata, color=['CD3D', 'NKG7', 'LST1','PPBP'], use_raw=False, save='_V2.pdf') # scaled and corrected gene expression values
+sc.pl.umap(adata, use_raw=False, save='.pdf') # scaled and corrected gene expression values
 
 # Clustering
 # a larger resolution = more clusters
 # a smaller resolution = fewer clusters
-sc.tl.leiden(adata, resolution=0.6) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
-sc.pl.umap(adata, color=['leiden', 'CD3D', 'NKG7'], save='_leiden.pdf')
-
-
-
+sc.tl.leiden(adata, resolution=0.5) # scanpy recommends the Leiden graph-clustering method (community detection based on optimizing modularity)
+sc.pl.umap(adata, color='leiden', save='_leiden.pdf')
 
 
 #------------------------
 # Compute clustering
 #------------------------
 
-## Make output directory for marker genes
-if not os.path.exists('markergenes'):
-    os.mkdir('markergenes')
-
 ## Define a list of marker genes (literature markers)
-genes_dict = {'B-cell': ['CD79A', 'MS4A1'],
-                     'T-cell': ['CD3D'],
-                     'T-cell CD8+': ['CD8A', 'CD8B'],
-                     'NK': ['GNLY', 'NKG7'],
-                     'Myeloid': ['CST3', 'LYZ'],
-                     'Monocytes': ['FCGR3A'],
-                     'Dendritic': ['FCER1A'],
-                     'Platelet': ['PPBP']}
+genes_dict = {'B-cell': ['CD79A', 'MS4A1','CD19'],
+                'T-cell': ['CD3D'],
+                'Naive T-cell': ['CCR7','LEF1','SELL','TCF7'],
+                'Effector Memory T-cell': ['GZMA','GZMK','NKG7','PRF1'],
+                'Cytotoxic T-cell CD8+': ['CD8A', 'CD8B'],
+                'Helper T-cell': ['CD4','IL7R','CCR7'],
+                'Th1': ['IFNG','TBX21'],
+                'NK': ['GNLY', 'NKG7','KLRD1','NCAM1'],
+                'Monocytes CD14+': ['FCGR3A','CD14','S100A8','S100A9','CLEC12A','LYZ'],
+                'Monocytes CD16+': ['FCGR3A','MS4A7'],
+                'Dendritic': ['FCER1A','CST3'],
+                'Megakaryocytes': ['PPBP', 'PF4']}
 
-# Make sure they are in the top 6000 highly variable genes
+# Make sure the marker genes are in the top 6000 highly variable genes
 genes_dict = {i:list(set(genes_dict[i]).intersection(adata.var_names)) for i in genes_dict}
 
 
