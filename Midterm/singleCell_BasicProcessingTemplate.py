@@ -242,12 +242,24 @@ for res in resolutions:
 # Determining the identity of cell types
 #----------------------------------------------
 
+res1 = 0.3
+sc.tl.leiden(adata, resolution = res1)
+# save the number of clusters into the variable 'final_cluster_num':
+final_cluster_num = adata.obs['leiden'].describe()['unique']
+
 # Identify cell types
 new_cluster_names = [
-    'T', 'CD14 Monocytes',
-    'NK', 'B',
-    'FCGR3A Monocytes',
-    'Dendritic', 'Platelet']
+    'Helper T Cell',
+    'Monocyte CD14+',
+    'B Cell',
+    'Naïve T Cell',
+    'Monocyte CD16+',
+    'NK Cell',
+    'Cytotoxic T Cell CD8+',
+    'Dendritic',
+    'CD4+ T Cell',
+    'Effector Memory T-cell',
+    'Megakaryocyte']
 adata.rename_categories('leiden', new_cluster_names)
 
 # Make UMAP
