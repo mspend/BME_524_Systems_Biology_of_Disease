@@ -46,3 +46,28 @@ print(len(depmap_tfs_new))
 #     if gene in all_tfs:
 #         depmap_tfs_new.append(gene)
 # print(len(depmap_tfs_new))
+
+### Dataset 3 ###
+## Known genes in GBM from DisGeNET
+df_disgenet = pd.read_csv('data/DisGeNET_gbmGenes.txt', delimiter='\t')
+print(df_disgenet['diseaseName'].value_counts())
+disgenet_tfs = set(df_disgenet['EntrezGeneId'])
+print(len(disgenet_tfs))
+# Subset to the known TFs in GBM using the Entrez IDs from CRISPR_TFs.csv
+disgenet_tfs = disgenet_tfs.intersection(all_tfs)
+print(len(disgenet_tfs))
+
+### Dataset 4 ###
+## Differentially expressed (DEG) TFs in GBM (computed in gbmSYGNAL training data set)
+df_degs = pd.read_csv('data/DEG_TFs.csv')
+degs_tfs = set(df_degs['Entrez ID'])
+degs_tfs = degs_tfs.intersection(all_tfs)
+print(len(degs_tfs))
+
+
+### Dataset 5 ###
+## The gbmSYGNAL network contains 112 somatically mutated genes or pathways that act through 74 TFs in GBM
+# Overwrite header using header=0 and names for column names
+df_gbmsygnal = pd.read_csv('data/gbmSYGNAL_TFs.csv', header=0,  names=['Bicluster', 'Entrez ID'])
+gbmsygnal_tfs = set(df_gbmsygnal['Entrez ID'])
+print(len(gbmsygnal_tfs))
