@@ -50,7 +50,7 @@ print(len(depmap_tfs_new))
 ### Dataset 3 ###
 ## Known genes in GBM from DisGeNET
 df_disgenet = pd.read_csv('data/DisGeNET_gbmGenes.txt', delimiter='\t')
-print(df_disgenet['diseaseName'].value_counts())
+# print(df_disgenet['diseaseName'].value_counts())
 disgenet_tfs = set(df_disgenet['EntrezGeneId'])
 print(len(disgenet_tfs))
 # Subset to the known TFs in GBM using the Entrez IDs from CRISPR_TFs.csv
@@ -69,5 +69,8 @@ print(len(degs_tfs))
 ## The gbmSYGNAL network contains 112 somatically mutated genes or pathways that act through 74 TFs in GBM
 # Overwrite header using header=0 and names for column names
 df_gbmsygnal = pd.read_csv('data/gbmSYGNAL_TFs.csv', header=0,  names=['Bicluster', 'Entrez ID'])
-gbmsygnal_tfs = set(df_gbmsygnal['Entrez ID'])
+# some rows have multiple TFs that we need to split
+# Uses very helpful list comprehension:  https://realpython.com/list-comprehension-python/
+# Also uses a helpful trick in list comprehension for un-nesting lists:  [item for sublist in l for item in sublist]
+gbmsygnal_tfs = set([i3 for i2 in [i.split(' ') for i in df_gbmsygnal['Entrez ID']] for i3 in i2])
 print(len(gbmsygnal_tfs))
